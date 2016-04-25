@@ -61,7 +61,7 @@ public class MainActivity extends Activity{
 		name = "/storage/emulated/0/Android/data/com.android.chrome/files";
 		File myfile = new File(name);
 		
-		mv = new Mapper(getApplicationContext(), 1000, 780, 40, 30);
+		mv = new Mapper(getApplicationContext(), 1000, 730, 40, 30);
 	    MapLoader load = new MapLoader();
 	    map = new PedometerMap();
 		map = load.loadMap(myfile, "labroom.svg");
@@ -103,7 +103,7 @@ public class MainActivity extends Activity{
 	}	
 
 	static class AccelerometerSensorEventListener implements SensorEventListener {
-		static TextView stepView, finalStep, positionStatus;	//output textviews
+		static TextView stepView, displacement, positionStatus;	//output textviews
 		static int steps, stepsF;
 		public static MotionOnAxis x,y,z;
 		public static float [] rotation = new float[9];
@@ -113,9 +113,9 @@ public class MainActivity extends Activity{
 		public static float [] orientation = new float[3];
 		public static float [] filter = new float[3];
 		
-		public AccelerometerSensorEventListener (TextView stpView, TextView finlStep, TextView positionStatusA) {
+		public AccelerometerSensorEventListener (TextView stpView, TextView displace, TextView positionStatusA) {
 			stepView = stpView;
-			finalStep = finlStep;
+			displacement = displace;
 			positionStatus = positionStatusA;
 			steps = 0;
 			stepsF = 0;
@@ -130,8 +130,9 @@ public class MainActivity extends Activity{
 		public  void onSensorChanged(SensorEvent se) {
 				
 				if (!x.didChangeAlot(se, 0) && !y.didChangeAlot(se, 1) && z.didChangeAlot(se, 2)){
+					displacementCal();
 					steps++;
-					stepView.setText("Steps: " + steps +  "\n");
+					stepView.setText("Steps: " + steps);
 				}
 				
 				if (distanceBetween(mv.startPoint, mv.destPoint) < 1){
@@ -153,11 +154,9 @@ public class MainActivity extends Activity{
 				filter[1] += (se.values[1] - filter[1])/n;
 				filter[2] += (se.values[2] - filter[2])/n;
 				
-				
-				graphFiltered.addPoint(filter);
+				graphFiltered.addPoint(filter);		//graph bypass data
 	
 				drawCompass();
-				
 			}
 		
 		//find displacement in X and Y axis
@@ -193,6 +192,7 @@ public class MainActivity extends Activity{
 				//mv.startPoint = new PointF ((float)(mv.startPoint.x + factor*Math.cos(azm - pi/3 )), (float)(mv.startPoint.y + factor*Math.sin(azm - pi/3)));
 			}
 			mv.startPoint = new PointF ((float)(mv.startPoint.x - factor*Math.cos(azm)), (float)(mv.startPoint.y - factor*Math.sin(azm)));	
+			displacement.setText("X displacement: " + xdisp + "\n" + "Y displacement: " + ydisp + "\n");
 		}
 		
 		public void recursivePath(PointF startPoint){
@@ -300,10 +300,8 @@ public class MainActivity extends Activity{
 			TextView view  = new TextView(rootView.getContext());
 			TextView stepView = new TextView(rootView.getContext());
 			TextView lightSen = new TextView(rootView.getContext());
-			TextView finalStep = new TextView(rootView.getContext());
-			TextView gRotX = new TextView(rootView.getContext());
-			TextView gRoty = new TextView(rootView.getContext());
-			TextView gRotz = new TextView(rootView.getContext());
+			TextView displacement = new TextView(rootView.getContext());
+			TextView heading = new TextView(rootView.getContext());
 			TextView magX = new TextView(rootView.getContext());
 			TextView magY = new TextView(rootView.getContext());
 			TextView magZ = new TextView(rootView.getContext());
@@ -317,13 +315,12 @@ public class MainActivity extends Activity{
 		
 			layout.addView(positionStatus);
 			layout.addView(stepView);
+			layout.addView(displacement);
 			layout.addView(lightSen);
 			layout.addView(magX);
 			layout.addView(magY);
 			layout.addView(magZ);
-			layout.addView(gRotX);
-			layout.addView(gRoty);
-			layout.addView(gRotz);
+			layout.addView(heading);
 			layout.addView(view);
 			
 			//construct graph and add to view
@@ -339,9 +336,6 @@ public class MainActivity extends Activity{
 			layout.addView(graphFiltered);
 			graphFiltered.setVisibility(View.VISIBLE); 
 
-
-			
-
 			//declare sensor manager 
 			SensorManager sensorManager = (SensorManager)
 					rootView.getContext().getSystemService(SENSOR_SERVICE);
@@ -354,7 +348,7 @@ public class MainActivity extends Activity{
 			
 			//declare all sensor event listeners 
 			SensorEventListener light = new LightSensorEventListener(lightSen);
-			SensorEventListener accel = new AccelerometerSensorEventListener(stepView, finalStep, positionStatus);
+			SensorEventListener accel = new AccelerometerSensorEventListener(stepView, displacement, positionStatus);
 			SensorEventListener accel2 = new AccelSensorEventListener(view);
 			SensorEventListener mag = new MagneticSensorEventListener(magX, magY, magZ);
 			

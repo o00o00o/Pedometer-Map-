@@ -20,11 +20,11 @@ class AccelSensorEventListener implements SensorEventListener {
 	private boolean full;
 	public static float azm;
 	public static float compassAzm;
-	TextView view1;
+	TextView heading;
 	
 	
 	public AccelSensorEventListener (TextView view) {
-		view1 = view;
+		heading = view;
 		full = false;
 		counter = 0;
 		azm = 0;
@@ -38,17 +38,19 @@ class AccelSensorEventListener implements SensorEventListener {
 	public  void onSensorChanged(SensorEvent se) {
 		if (se.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
 			
+			
 			gravity = se.values;
 			SensorManager.getRotationMatrix(rotation, inclination, gravity, MagneticSensorEventListener.magnetic);
 			SensorManager.getOrientation(rotation, orientation);
+			
+			heading.setText("Azmouth: " + orientation[0] + "\n"
+							+ "Pitch: " + orientation[1] + "\n"
+							+ "Yaw: "   + orientation[2] + "\n");  
 			
 			if (counter > points.length-1){
 				full = true;
 				counter = 0;
 			}
-			
-			
-			
 				
 			float newCompass = (float) Math.toDegrees(orientation[0]);
 			
