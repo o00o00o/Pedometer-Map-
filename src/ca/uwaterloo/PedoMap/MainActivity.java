@@ -103,7 +103,6 @@ public class MainActivity extends Activity{
 	}	
 
 	static class AccelerometerSensorEventListener implements SensorEventListener {
-		private static final String Acceleration = null;
 		static TextView stepView, finalStep, positionStatus;	//output textviews
 		static int steps, stepsF;
 		public static MotionOnAxis x,y,z;
@@ -112,6 +111,7 @@ public class MainActivity extends Activity{
 		public static float [] gravity = new float[3];
 		public static float [] magnetic = new float[3];
 		public static float [] orientation = new float[3];
+		public static float [] filter = new float[3];
 		
 		public AccelerometerSensorEventListener (TextView stpView, TextView finlStep, TextView positionStatusA) {
 			stepView = stpView;
@@ -131,6 +131,7 @@ public class MainActivity extends Activity{
 				
 				if (!x.didChangeAlot(se, 0) && !y.didChangeAlot(se, 1) && z.didChangeAlot(se, 2)){
 					steps++;
+					stepView.setText("Steps: " + steps +  "\n");
 				}
 				
 				if (distanceBetween(mv.startPoint, mv.destPoint) < 1){
@@ -141,10 +142,21 @@ public class MainActivity extends Activity{
 					recursivePath(mv.startPoint);
 				}
 				
-				stepView.setText("Steps: " + steps +  "\n");
+				//graph accel data
+				graph.addPoint(se.values);
+				
+				
+				float n = 2500;		//low bypass offset
+				
+				//low bypass filter 
+				filter[0] += (se.values[0] - filter[0])/n;
+				filter[1] += (se.values[1] - filter[1])/n;
+				filter[2] += (se.values[2] - filter[2])/n;
+				
+				
+				graphFiltered.addPoint(filter);
 	
 				drawCompass();
-				
 				
 			}
 		
@@ -239,10 +251,6 @@ public class MainActivity extends Activity{
 			mv.setCompNeedle(CompassBearing);
 		}
 		
-		
-		
-		
-		
 		//calculate distanceBetween user location and final location
 		public float distanceBetween (PointF p1, PointF p2){
 			if (p1 == null || p2 == null){
@@ -270,8 +278,9 @@ public class MainActivity extends Activity{
 	public void clear (View view) {
 		//"clear" button calls this function, resets all event listeners and graph 
 		LightSensorEventListener.reset();
-		
+		AccelerometerSensorEventListener.reset();
         graph.purge();
+        graphFiltered.purge();
 	}
 	
 	
@@ -305,11 +314,10 @@ public class MainActivity extends Activity{
 			//add textviews, graphs, and map to layout
 			layout.addView(mv);
 			mv.setVisibility(View.VISIBLE);
-			
-			layout.addView(finalStep);
+		
 			layout.addView(positionStatus);
-			layout.addView(lightSen);
 			layout.addView(stepView);
+			layout.addView(lightSen);
 			layout.addView(magX);
 			layout.addView(magY);
 			layout.addView(magZ);
