@@ -34,6 +34,7 @@ import mapper.PedometerMap;
 
 public class MainActivity extends Activity{
 	static LineGraphView graph; 
+	static LineGraphView graphFiltered;
 	public static Mapper mv; 
 	static PedometerMap map;
 	static MapListener Pl = new MapListener();
@@ -111,7 +112,77 @@ public class MainActivity extends Activity{
 		public static float [] gravity = new float[3];
 		public static float [] magnetic = new float[3];
 		public static float [] orientation = new float[3];
+		
+		public AccelerometerSensorEventListener (TextView stpView, TextView finlStep, TextView positionStatusA) {
+			stepView = stpView;
+			finalStep = finlStep;
+			positionStatus = positionStatusA;
+			steps = 0;
+			stepsF = 0;
+			x = new MotionOnAxis();
+			y = new MotionOnAxis();
+			z = new MotionOnAxis();
+		}
+		
+		public void onAccuracyChanged(Sensor s, int i) {}
+		
+		//Where the magic happens
+		public  void onSensorChanged(SensorEvent se) {
+				
+				if (!x.didChangeAlot(se, 0) && !y.didChangeAlot(se, 1) && z.didChangeAlot(se, 2)){
+					steps++;
+				}
+				
+				if (distanceBetween(mv.startPoint, mv.destPoint) < 1){
+					positionStatus.setText("You have arrived!");     
+				} else if (mv.startPoint != null && mv.destPoint != null){
+					solution.clear();
+					positionStatus.setText("");     
+					recursivePath(mv.startPoint);
+				}
+				
+				stepView.setText("Steps: " + steps +  "\n");
 	
+				drawCompass();
+				
+				
+			}
+		
+		//find displacement in X and Y axis
+		public void displacementCal() {
+			float angle;
+			float factor = 0.5f;
+			float azm = AccelSensorEventListener.azm;
+			
+			if ((azm < 1.5707963 ) && (azm > 0.001 )) {
+				angle = (float) (azm + Math.PI) ;
+				xdisp += Math.sin(angle);
+				ydisp += Math.cos(angle);
+				//mv.startPoint = new PointF ((float)(mv.startPoint.x + factor*Math.sin(angle)), (float)(mv.startPoint.y + factor*Math.cos(angle)));
+
+			}
+			if ((azm > 1.5707963 ) && (azm < 3.141592)) {
+				angle = (float)Math.PI - azm;
+				xdisp += Math.sin(angle);
+				ydisp -= Math.cos(angle);
+				//mv.startPoint = new PointF ((float)(mv.startPoint.x + factor*Math.sin(angle)), (float)(mv.startPoint.y - factor*Math.cos(angle)));
+			}
+			if ((azm < -0.001 ) && (azm > -1.5707963)) { 
+				angle = Math.abs(azm);
+				xdisp -= Math.sin(angle);
+				ydisp += Math.cos(angle);
+				//mv.startPoint = new PointF ((float)(mv.startPoint.x - factor*Math.sin(angle)), (float)(mv.startPoint.y + factor*Math.cos(angle)));
+
+			}
+			if ((azm < -1.5707963) && (azm > -3.141592)) {
+				angle = (float)Math.PI - Math.abs(azm);
+				xdisp -= Math.sin(angle);
+				ydisp -= Math.cos(angle);
+				//mv.startPoint = new PointF ((float)(mv.startPoint.x + factor*Math.cos(azm - pi/3 )), (float)(mv.startPoint.y + factor*Math.sin(azm - pi/3)));
+			}
+			mv.startPoint = new PointF ((float)(mv.startPoint.x - factor*Math.cos(azm)), (float)(mv.startPoint.y - factor*Math.sin(azm)));	
+		}
+		
 		public void recursivePath(PointF startPoint){
 			PointF currentPoint = startPoint;
 			PointF nextPoint;
@@ -146,74 +217,6 @@ public class MainActivity extends Activity{
 			solution = path;
 			mv.setUserPath(solution);
 		}
-		
-		public AccelerometerSensorEventListener (TextView stpView, TextView finlStep, TextView positionStatusA) {
-			stepView = stpView;
-			finalStep = finlStep;
-			positionStatus = positionStatusA;
-			steps = 0;
-			stepsF = 0;
-			x = new MotionOnAxis();
-			y = new MotionOnAxis();
-			z = new MotionOnAxis();
-		}
-		
-		public void onAccuracyChanged(Sensor s, int i) {}
-		
-		//Where the magic happens
-		public  void onSensorChanged(SensorEvent se) {
-			if (se.sensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION) {
-				float azm = AccelSensorEventListener.azm;
-				if (!x.didChangeAlot(se, 0) && !y.didChangeAlot(se, 1) && z.didChangeAlot(se, 2)){
-					steps++;
-					float angle;
-					float factor = 0.5f;
-					
-					if ((azm < 1.5707963 ) && (azm > 0.001 )) {
-						angle = (float) (azm + Math.PI) ;
-						xdisp += Math.sin(angle);
-						ydisp += Math.cos(angle);
-						//mv.startPoint = new PointF ((float)(mv.startPoint.x + factor*Math.sin(angle)), (float)(mv.startPoint.y + factor*Math.cos(angle)));
-
-					}
-					if ((azm > 1.5707963 ) && (azm < 3.141592)) {
-						angle = (float)Math.PI - azm;
-						xdisp += Math.sin(angle);
-						ydisp -= Math.cos(angle);
-						//mv.startPoint = new PointF ((float)(mv.startPoint.x + factor*Math.sin(angle)), (float)(mv.startPoint.y - factor*Math.cos(angle)));
-					}
-					if ((azm < -0.001 ) && (azm > -1.5707963)) { 
-						angle = Math.abs(azm);
-						xdisp -= Math.sin(angle);
-						ydisp += Math.cos(angle);
-						//mv.startPoint = new PointF ((float)(mv.startPoint.x - factor*Math.sin(angle)), (float)(mv.startPoint.y + factor*Math.cos(angle)));
-
-					}
-					if ((azm < -1.5707963) && (azm > -3.141592)) {
-						angle = (float)Math.PI - Math.abs(azm);
-						xdisp -= Math.sin(angle);
-						ydisp -= Math.cos(angle);
-						//mv.startPoint = new PointF ((float)(mv.startPoint.x + factor*Math.cos(azm - pi/3 )), (float)(mv.startPoint.y + factor*Math.sin(azm - pi/3)));
-					}
-					mv.startPoint = new PointF ((float)(mv.startPoint.x - factor*Math.cos(azm)), (float)(mv.startPoint.y - factor*Math.sin(azm)));
-					
-				}
-				
-				if (distanceBetween(mv.startPoint, mv.destPoint) < 1){
-					positionStatus.setText("You have arrived!");     
-				} else if (mv.startPoint != null && mv.destPoint != null){
-					solution.clear();
-					positionStatus.setText("");     
-					recursivePath(mv.startPoint);
-				}
-				
-				stepView.setText("Azimuth: " + Math.toDegrees(azm) +  "\n");
-				float total = Math.abs(xdisp) +  Math.abs(ydisp);
-									
-				
-				drawCompass();
-				}
-			}
 		
 		public void drawCompass() {
 			PointF CompassEnd = new PointF();
@@ -267,6 +270,7 @@ public class MainActivity extends Activity{
 	public void clear (View view) {
 		//"clear" button calls this function, resets all event listeners and graph 
 		LightSensorEventListener.reset();
+		
         graph.purge();
 	}
 	
@@ -320,6 +324,13 @@ public class MainActivity extends Activity{
 					Arrays.asList("x", "y", "z"));
 			layout.addView(graph);
 			graph.setVisibility(View.VISIBLE); 
+			
+			graphFiltered = new LineGraphView(rootView.getContext(),
+					100,
+					Arrays.asList("x", "y", "z"));
+			layout.addView(graphFiltered);
+			graphFiltered.setVisibility(View.VISIBLE); 
+
 
 			
 
