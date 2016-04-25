@@ -102,7 +102,7 @@ public class MainActivity extends Activity{
 
 	static class AccelerometerSensorEventListener implements SensorEventListener {
 		private static final String Acceleration = null;
-		static TextView stepView, finalStep, magView;	//output textviews
+		static TextView stepView, finalStep, positionStatus;	//output textviews
 		static int steps, stepsF;
 		public static MotionOnAxis x,y,z;
 		public static float [] rotation = new float[9];
@@ -114,10 +114,10 @@ public class MainActivity extends Activity{
 		public static List<PointF> solution = new ArrayList<PointF>();
 		
 		
-		public AccelerometerSensorEventListener (TextView stpView, TextView finlStep, TextView magViewA) {
+		public AccelerometerSensorEventListener (TextView stpView, TextView finlStep, TextView positionStatusA) {
 			stepView = stpView;
 			finalStep = finlStep;
-			magView = magViewA;
+			positionStatus = positionStatusA;
 			steps = 0;
 			stepsF = 0;
 			x = new MotionOnAxis();
@@ -206,10 +206,10 @@ public class MainActivity extends Activity{
 				}
 				
 				if (distanceBetween(mv.startPoint, mv.destPoint) < 1){
-					magView.setText("You have arrived!");     
+					positionStatus.setText("You have arrived!");     
 				} else if (mv.startPoint != null && mv.destPoint != null){
 					solution.clear();
-					magView.setText("");     
+					positionStatus.setText("");     
 					recursivePath(mv.startPoint);
 				}
 				
@@ -300,22 +300,21 @@ public class MainActivity extends Activity{
 			TextView magX = new TextView(rootView.getContext());
 			TextView magY = new TextView(rootView.getContext());
 			TextView magZ = new TextView(rootView.getContext());
-			TextView magView  =  new TextView(rootView.getContext());
+			TextView positionStatus  =  new TextView(rootView.getContext());
 			
 			LinearLayout layout = (LinearLayout) rootView.findViewById(R.id.linear);	//set linearlayout to layout
 		    
-			//add textviews to layout
+			//add textviews, graphs, and map to layout
 			layout.addView(mv);
 			mv.setVisibility(View.VISIBLE);
 			
-			
+			layout.addView(finalStep);
+			layout.addView(positionStatus);
 			layout.addView(lightSen);
 			layout.addView(stepView);
-			layout.addView(finalStep);
 			layout.addView(magX);
 			layout.addView(magY);
 			layout.addView(magZ);
-			layout.addView(magView);
 			layout.addView(gRotX);
 			layout.addView(gRoty);
 			layout.addView(gRotz);
@@ -343,7 +342,7 @@ public class MainActivity extends Activity{
 			
 			//declare all sensor event listeners 
 			SensorEventListener light = new LightSensorEventListener(lightSen);
-			SensorEventListener accel = new AccelerometerSensorEventListener(stepView, finalStep, magView);
+			SensorEventListener accel = new AccelerometerSensorEventListener(stepView, finalStep, positionStatus);
 			SensorEventListener accel2 = new AccelSensorEventListener(view);
 			SensorEventListener mag = new MagneticSensorEventListener(magX, magY, magZ);
 			SensorEventListener game = new GameRotation(gRotX, gRoty, gRotz);
