@@ -46,6 +46,8 @@ public class MainActivity extends Activity{
 	static boolean[][] wasHere;
 	public static ArrayList<PointF> anchors = new ArrayList<PointF>();
 	static LineSegment compassNeedle = new LineSegment(new PointF(0,0), new PointF(100,100));
+	public static List<InterceptPoint> intercept = new ArrayList<InterceptPoint>();
+	public static List<PointF> solution = new ArrayList<PointF>();
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -54,7 +56,6 @@ public class MainActivity extends Activity{
 		if (savedInstanceState == null) {
 			getFragmentManager().beginTransaction().add(R.id.container, new PlaceholderFragment()).commit();
 		}
-		
 	
 		name = "/storage/emulated/0/Android/data/com.android.chrome/files";
 		File myfile = new File(name);
@@ -110,27 +111,7 @@ public class MainActivity extends Activity{
 		public static float [] gravity = new float[3];
 		public static float [] magnetic = new float[3];
 		public static float [] orientation = new float[3];
-		public static List<InterceptPoint> intercept = new ArrayList<InterceptPoint>();
-		public static List<PointF> solution = new ArrayList<PointF>();
-		
-		
-		public AccelerometerSensorEventListener (TextView stpView, TextView finlStep, TextView positionStatusA) {
-			stepView = stpView;
-			finalStep = finlStep;
-			positionStatus = positionStatusA;
-			steps = 0;
-			stepsF = 0;
-			x = new MotionOnAxis();
-			y = new MotionOnAxis();
-			z = new MotionOnAxis();
-		}
-		
-		
-		
-		public void onAccuracyChanged(Sensor s, int i) {}
-		
-		
-		
+	
 		public void recursivePath(PointF startPoint){
 			PointF currentPoint = startPoint;
 			PointF nextPoint;
@@ -166,6 +147,19 @@ public class MainActivity extends Activity{
 			mv.setUserPath(solution);
 		}
 		
+		public AccelerometerSensorEventListener (TextView stpView, TextView finlStep, TextView positionStatusA) {
+			stepView = stpView;
+			finalStep = finlStep;
+			positionStatus = positionStatusA;
+			steps = 0;
+			stepsF = 0;
+			x = new MotionOnAxis();
+			y = new MotionOnAxis();
+			z = new MotionOnAxis();
+		}
+		
+		public void onAccuracyChanged(Sensor s, int i) {}
+		
 		//Where the magic happens
 		public  void onSensorChanged(SensorEvent se) {
 			if (se.sensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION) {
@@ -174,7 +168,7 @@ public class MainActivity extends Activity{
 					steps++;
 					float angle;
 					float factor = 0.5f;
-					float pi = (float) Math.PI;
+					
 					if ((azm < 1.5707963 ) && (azm > 0.001 )) {
 						angle = (float) (azm + Math.PI) ;
 						xdisp += Math.sin(angle);
@@ -214,39 +208,39 @@ public class MainActivity extends Activity{
 				}
 				
 				stepView.setText("Azimuth: " + Math.toDegrees(azm) +  "\n");
-
-				
 				float total = Math.abs(xdisp) +  Math.abs(ydisp);
-					
-				gravity = se.values;
+									
 				
-				//get position, Y-axis( the top of the phone) points north
-				SensorManager.getRotationMatrix(rotation, inclination, gravity, magnetic);
-				SensorManager.getOrientation(rotation, orientation);
-				graph.addPoint(orientation);				
-				
-				PointF CompassEnd = new PointF();
-				PointF CompassStart = new PointF();
-				
-				CompassStart = mv.getUserPoint();
-				CompassStart = mv.getStartPoint(); 
-				
-				float yFinal = (float)(CompassStart.y +  (Math.cos(AccelSensorEventListener.azm) * -3 ));
-				float xFinal = (float)(CompassStart.x +  (Math.sin(AccelSensorEventListener.azm) * -3 ));
-				
-				CompassEnd.set(xFinal, yFinal);
-				List<PointF> CompassBearing = new ArrayList<PointF>();
-				CompassBearing.add(CompassStart);
-				CompassBearing.add(	CompassEnd);
-				
-				compassNeedle = new LineSegment(CompassStart, CompassEnd);
-				
-				mv.setCompass(compassNeedle);
-				mv.setCompNeedle(CompassBearing);
+				drawCompass();
 				}
 			}
 		
+		public void drawCompass() {
+			PointF CompassEnd = new PointF();
+			PointF CompassStart = new PointF();
+			
+			CompassStart = mv.getUserPoint();
+			CompassStart = mv.getStartPoint(); 
+			
+			float yFinal = (float)(CompassStart.y +  (Math.cos(AccelSensorEventListener.azm) * -3 ));
+			float xFinal = (float)(CompassStart.x +  (Math.sin(AccelSensorEventListener.azm) * -3 ));
+			
+			CompassEnd.set(xFinal, yFinal);
+			List<PointF> CompassBearing = new ArrayList<PointF>();
+			CompassBearing.add(CompassStart);
+			CompassBearing.add(	CompassEnd);
+			
+			compassNeedle = new LineSegment(CompassStart, CompassEnd);
+			
+			mv.setCompass(compassNeedle);
+			mv.setCompNeedle(CompassBearing);
+		}
 		
+		
+		
+		
+		
+		//calculate distanceBetween user location and final location
 		public float distanceBetween (PointF p1, PointF p2){
 			if (p1 == null || p2 == null){
 				return 0f;
@@ -338,21 +332,19 @@ public class MainActivity extends Activity{
 			Sensor accelSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
 			Sensor accel2Sensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 			Sensor magSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
-			Sensor gameRot = sensorManager.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR);
 			
 			//declare all sensor event listeners 
 			SensorEventListener light = new LightSensorEventListener(lightSen);
 			SensorEventListener accel = new AccelerometerSensorEventListener(stepView, finalStep, positionStatus);
 			SensorEventListener accel2 = new AccelSensorEventListener(view);
 			SensorEventListener mag = new MagneticSensorEventListener(magX, magY, magZ);
-			SensorEventListener game = new GameRotation(gRotX, gRoty, gRotz);
 			
 			//register all sensor event listeners 
 			sensorManager.registerListener(light, lightSensor, SensorManager.SENSOR_DELAY_NORMAL);
 			sensorManager.registerListener(accel, accelSensor, SensorManager.SENSOR_DELAY_GAME);
 			sensorManager.registerListener(accel2, accel2Sensor, SensorManager.SENSOR_DELAY_GAME);
 			sensorManager.registerListener(mag, magSensor, SensorManager.SENSOR_DELAY_GAME);	
-			sensorManager.registerListener(game, gameRot, SensorManager.SENSOR_DELAY_GAME);
+			
 			return rootView;
 		}
 	}
